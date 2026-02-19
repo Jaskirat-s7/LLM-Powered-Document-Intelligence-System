@@ -9,9 +9,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
-from langchain.docstore.document import Document
-from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
+from langchain_core.documents import Document
+from langchain_core.documents import Document
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,10 +21,6 @@ class MultimodalRAG:
         self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         self.vectorstore = None
         self.chain = None
-        self.memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-        )
         self.llm = ChatOpenAI(
             model="gpt-4o",
             openai_api_key=self.openai_api_key,
@@ -125,17 +120,47 @@ class MultimodalRAG:
         # Create Vector Store
         self.vectorstore = FAISS.from_documents(splits, self.embeddings)
         
-        # Create Chain
-        self.chain = ConversationalRetrievalChain.from_llm(
-            llm=self.llm,
-            retriever=self.vectorstore.as_retriever(),
-            memory=self.memory
+        # Create Chain using LCEL
+        from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+        from langchain_core.runnables import RunnablePassthrough
+        from langchain_core.output_parsers import StrOutputParser
+        
+        retriever = self.vectorstore.as_retriever()
+        
+        # Define prompt
+        template = """Answer the question based only on the following context:
+{context}
+
+Question: {question}
+"""
+        prompt = ChatPromptTemplate.from_template(template)
+        
+        def format_docs(docs):
+            return "\n\n".join([d.page_content for d in docs])
+            
+        self.chain = (
+            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            | prompt
+            | self.llm
+            | StrOutputParser()
         )
+        # Note: We are simplifying to a basic RAG chain for stability given dependency issues.
+        # History is not explicitly handled in the query rewriting here but context is preserved in session state in app.py.
 
     def query(self, question: str) -> Dict[str, Any]:
         """Queries the RAG system."""
         if not self.chain:
             return {"answer": "Please upload and process documents first."}
         
-        response = self.chain.invoke({"question": question})
-        return response
+        # Invoke chain
+        response_text = self.chain.invoke(question)
+        
+        # Manually retrieve docs to return them (for image display)
+        # This is a bit redundant but ensures we get the docs back
+        retriever = self.vectorstore.as_retriever()
+        source_documents = retriever.invoke(question)
+        
+        return {
+            "answer": response_text,
+            "source_documents": source_documents
+        }
