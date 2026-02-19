@@ -23,7 +23,8 @@ with st.sidebar:
     
     process_btn = st.button("Process Documents")
 
-# Session State
+# Session State Management
+# Maintains conversation history and vector store across reruns
 if "rag" not in st.session_state:
     st.session_state.rag = None
 if "messages" not in st.session_state:
