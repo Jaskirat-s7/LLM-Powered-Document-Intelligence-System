@@ -1,6 +1,7 @@
 # Multimodal LLM-Powered Document Intelligence System
 
-A RAG (Retrieval-Augmented Generation) pipeline using LangChain, OpenAI, and Streamlit that supports both text and image-based documents.
+## Project Overview
+This project implements an end-to-end RAG (Retrieval-Augmented Generation) pipeline using LangChain, OpenAI, and Streamlit. It is designed to process both text and image-based documents, providing a comprehensive document intelligence solution. The system architecture leverages local vector storage (FAISS) and multimodal LLMs (GPT-4o) for high-accuracy retrieval and question answering.
 
 ## Features
 
