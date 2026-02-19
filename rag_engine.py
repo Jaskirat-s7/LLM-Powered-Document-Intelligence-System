@@ -114,6 +114,8 @@ class MultimodalRAG:
             all_docs.extend(self.process_document(file))
             
         # Split text
+        # Implementing a token-aware chunking strategy using RecursiveCharacterTextSplitter.
+        # This splitter attempts to keep related text together while respecting chunk size limits.
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200
